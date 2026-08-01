@@ -36,97 +36,74 @@ return {
                     "asm_lsp",
                     "clangd",
                     "harper_ls",
+                    "gopls",
                 },
-                handlers = {
-                    function(server_name) -- default handler (optional)
-                        require("lspconfig")[server_name].setup {
-                            capabilities = capabilities
-                        }
-                    end,
-
-                    zls = function()
-                        local lspconfig = require("lspconfig")
-                        lspconfig.zls.setup({
-                            root_dir = lspconfig.util.root_pattern(".git", "build.zig", "zls.json"),
-                            settings = {
-                                zls = {
-                                    enable_inlay_hints = true,
-                                    enable_snippets = true,
-                                    warn_style = true,
-                                },
-                            },
-                        })
-                        vim.g.zig_fmt_parse_errors = 0
-                        vim.g.zig_fmt_autosave = 0
-
-                    end,
-                    ["lua_ls"] = function()
-                        local lspconfig = require("lspconfig")
-
-                        lspconfig.lua_ls.setup {
-                            capabilities = capabilities,
-                            settings = {
-                                Lua = {
-                                    runtime = {
-                                        version = 'LuaJIT',
-                                    },
-                                    diagnostics = {
-                                        globals = { 'vim' },
-                                    },
-                                    workspace = {
-                                        library = vim.api.nvim_get_runtime_file("", true),
-                                        checkThirdParty = false,
-                                    },
-                                    format = {
-                                        enable = true,
-                                        -- Put format options here
-                                        -- NOTE: the value should be STRING!!
-                                        defaultConfig = {
-                                            indent_style = "space",
-                                            indent_size = "2",
-                                        }
-                                    },
-                                }
-                            }
-                        }
-                    end,
-                    ["clangd"] = function()
-                        require("lspconfig").clangd.setup({
-                            capabilities = capabilities,
-                            cmd = {
-                                "clangd",
-                                "--background-index",
-                                "--offset-encoding=utf-16",
-                            }
-                        })
-                    end,
-                    ["arduino_language_server"] = function()
-                        require("lspconfig").arduino_language_server.setup({
-                            capabilities = capabilities,
-                            cmd = {
-                                "arduino-language-server",
-                                "-cli", "/usr/bin/arduino-cli",
-                                "-cli-config", "/home/duck/.arduino15/arduino-cli.yaml",
-                                "-fqbn", "arduino:avr:mega",
-                                "-clangd", "/usr/bin/clangd",
-                            },
-                        })
-                    end,
-                    ["asm_lsp"] = function()
-                        require("lspconfig").asm_lsp.setup({
-                            capabilities = capabilities,
-                            filetypes = { "asm", "s", "S" },
-                        })
-                    end,
-                    ["tailwindcss"] = function()
-                        local lspconfig = require("lspconfig")
-                        lspconfig.tailwindcss.setup({
-                            capabilities = capabilities,
-                            filetypes = { "html", "css", "scss", "javascript", "javascriptreact", "typescript", "typescriptreact", "vue", "svelte", "heex" },
-                        })
-                    end,
-                }
+                -- Mason 2.x: the `handlers` table was REMOVED — any handlers
+                -- block here is silently ignored. Servers are configured with
+                -- the native vim.lsp.config API below.
             })
+
+            -- vim.lsp.config MERGES with the lspconfig built-in definition,
+            -- so only overrides are needed. vim.lsp.enable is idempotent even
+            -- with mason-lspconfig automatic_enable = true.
+
+            -- lua_ls
+            vim.lsp.config["lua_ls"] = {
+                capabilities = capabilities,
+                settings = {
+                    Lua = {
+                        runtime = {
+                            version = 'LuaJIT',
+                        },
+                        diagnostics = {
+                            globals = { 'vim' },
+                        },
+                        workspace = {
+                            library = vim.api.nvim_get_runtime_file("", true),
+                            checkThirdParty = false,
+                        },
+                        format = {
+                            enable = true,
+                            -- NOTE: the value should be STRING!!
+                            defaultConfig = {
+                                indent_style = "space",
+                                indent_size = "2",
+                            },
+                        },
+                    },
+                },
+            }
+            vim.lsp.enable("lua_ls")
+
+            -- clangd (--offset-encoding dropped: utf-16 is the default since clangd 17)
+            vim.lsp.config["clangd"] = {
+                capabilities = capabilities,
+                cmd = {
+                    "clangd",
+                    "--background-index",
+                },
+            }
+            vim.lsp.enable("clangd")
+
+            -- arduino_language_server
+            vim.lsp.config["arduino_language_server"] = {
+                capabilities = capabilities,
+                cmd = {
+                    "arduino-language-server",
+                    "-cli", "/usr/bin/arduino-cli",
+                    "-cli-config", "/home/duck/.arduino15/arduino-cli.yaml",
+                    "-fqbn", "arduino:avr:mega",
+                    "-clangd", "/usr/bin/clangd",
+                },
+            }
+            vim.lsp.enable("arduino_language_server")
+
+            -- asm_lsp
+            vim.lsp.config["asm_lsp"] = {
+                capabilities = capabilities,
+                filetypes = { "asm", "s", "S" },
+            }
+            vim.lsp.enable("asm_lsp")
 
             -- Harper-ls is system-installed, not Mason-managed.
             -- Set it up directly using the native vim.lsp.config API.

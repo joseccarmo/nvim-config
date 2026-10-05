@@ -14,6 +14,7 @@ return {
       pattern = '*/diary/*.md',
       callback = function()
         local template = vim.fn.expand('~/vimwiki/templates/diary-template.md')
+        if vim.fn.filereadable(template) == 0 then return end
         local lines = {}
         for line in io.lines(template) do
           local processed = line:gsub('{{date}}', os.date('%B %d, %Y'))

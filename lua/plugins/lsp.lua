@@ -17,7 +17,22 @@ return {
     config = function()
         require("conform").setup({
             formatters_by_ft = {
-            }
+                c = { "clang_format" },
+                cpp = { "clang_format" },
+            },
+            formatters = {
+                clang_format = {
+                    -- Option A: 4 Spaces indentation
+                    args = {
+                        "--style={BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 100}",
+                    },
+
+                    -- Option B: Tabs instead of spaces (uncomment to use)
+                    -- args = {
+                    --   "--style={BasedOnStyle: Google, IndentWidth: 4, TabWidth: 4, UseTab: Always}",
+                    -- },
+                },
+            },
         })
         local cmp = require('cmp')
         local cmp_lsp = require("cmp_nvim_lsp")
@@ -27,164 +42,195 @@ return {
             vim.lsp.protocol.make_client_capabilities(),
             cmp_lsp.default_capabilities())
 
-            require("fidget").setup({})
-            require("mason").setup()
-            require("mason-lspconfig").setup({
-                ensure_installed = {
-                    "lua_ls",
-                    "arduino_language_server",
-                    "asm_lsp",
-                    "clangd",
-                    "harper_ls",
-                    "gopls",
-                },
-                -- Mason 2.x: the `handlers` table was REMOVED — any handlers
-                -- block here is silently ignored. Servers are configured with
-                -- the native vim.lsp.config API below.
-            })
+        require("fidget").setup({})
+        require("mason").setup()
+        require("mason-lspconfig").setup({
+            ensure_installed = {
+                "lua_ls",
+                "arduino_language_server",
+                "asm_lsp",
+                "clangd",
+                "harper_ls",
+                "gopls",
+                "neocmake",
+            },
+            -- Mason 2.x: the `handlers` table was REMOVED — any handlers
+            -- block here is silently ignored. Servers are configured with
+            -- the native vim.lsp.config API below.
+        })
 
-            -- vim.lsp.config MERGES with the lspconfig built-in definition,
-            -- so only overrides are needed. vim.lsp.enable is idempotent even
-            -- with mason-lspconfig automatic_enable = true.
+        -- vim.lsp.config MERGES with the lspconfig built-in definition,
+        -- so only overrides are needed. vim.lsp.enable is idempotent even
+        -- with mason-lspconfig automatic_enable = true.
 
-            -- lua_ls
-            vim.lsp.config["lua_ls"] = {
-                capabilities = capabilities,
-                settings = {
-                    Lua = {
-                        runtime = {
-                            version = 'LuaJIT',
-                        },
-                        diagnostics = {
-                            globals = { 'vim' },
-                        },
-                        workspace = {
-                            library = vim.api.nvim_get_runtime_file("", true),
-                            checkThirdParty = false,
-                        },
-                        format = {
-                            enable = true,
-                            -- NOTE: the value should be STRING!!
-                            defaultConfig = {
-                                indent_style = "space",
-                                indent_size = "2",
-                            },
+        -- lua_ls
+        vim.lsp.config["lua_ls"] = {
+            capabilities = capabilities,
+            settings = {
+                Lua = {
+                    runtime = {
+                        version = 'LuaJIT',
+                    },
+                    diagnostics = {
+                        globals = { 'vim' },
+                    },
+                    workspace = {
+                        library = vim.api.nvim_get_runtime_file("", true),
+                        checkThirdParty = false,
+                    },
+                    format = {
+                        enable = true,
+                        -- NOTE: the value should be STRING!!
+                        defaultConfig = {
+                            indent_style = "space",
+                            indent_size = "4",
                         },
                     },
                 },
-            }
-            vim.lsp.enable("lua_ls")
+            },
+        }
+        vim.lsp.enable("lua_ls")
 
-            -- clangd (--offset-encoding dropped: utf-16 is the default since clangd 17)
-            vim.lsp.config["clangd"] = {
-                capabilities = capabilities,
-                cmd = {
-                    "clangd",
-                    "--background-index",
+        --php for with wordpress addition
+        vim.lsp.config["intelephense"] = {
+            capabilities = capabilities,
+            settings = {
+                intelephense = {
+                    files = {
+                        maxSize = 10000000,
+                    },
                 },
-            }
-            vim.lsp.enable("clangd")
+            },
+        }
 
-            -- arduino_language_server
-            vim.lsp.config["arduino_language_server"] = {
-                capabilities = capabilities,
-                cmd = {
-                    "arduino-language-server",
-                    "-cli", "/usr/bin/arduino-cli",
-                    "-cli-config", "/home/duck/.arduino15/arduino-cli.yaml",
-                    "-fqbn", "arduino:avr:mega",
-                    "-clangd", "/usr/bin/clangd",
+        -- clangd (--offset-encoding dropped: utf-16 is the default since clangd 17)
+        vim.lsp.config["clangd"] = {
+            capabilities = capabilities,
+            cmd = {
+                "clangd",
+                "--background-index",
+                -- Run clang-tidy checks in-editor; reads .clang-tidy from the
+                -- file's dir upward (~/exercism/cpp/.clang-tidy for exercises).
+                "--clang-tidy",
+                -- Fallback compile flags live in ~/exercism/cpp/.clangd
+                -- (no --fallback-flags CLI option exists).
+            },
+        }
+        vim.lsp.enable("clangd")
+
+        -- arduino_language_server
+        vim.lsp.config["arduino_language_server"] = {
+            capabilities = capabilities,
+            cmd = {
+                "arduino-language-server",
+                "-cli", "/usr/bin/arduino-cli",
+                "-cli-config", vim.fn.expand("~/.arduino15/arduino-cli.yaml"),
+                "-fqbn", "arduino:avr:mega",
+                "-clangd", "/usr/bin/clangd",
+            },
+        }
+        vim.lsp.enable("arduino_language_server")
+
+        -- asm_lsp
+        vim.lsp.config["asm_lsp"] = {
+            capabilities = capabilities,
+            filetypes = { "asm", "s", "S" },
+        }
+        vim.lsp.enable("asm_lsp")
+
+        -- neocmakelsp (CMakeLists.txt / *.cmake)
+        -- lspconfig name is "neocmake" (mason pkg: neocmakelsp).
+        vim.lsp.config["neocmake"] = {
+            capabilities = capabilities,
+        }
+        vim.lsp.enable("neocmake")
+
+        -- Old Python cmake-language-server (mason pkg → lspconfig name
+        -- "cmake") is installed manually and would otherwise be
+        -- auto-enabled by mason-lspconfig automatic_enable, fighting
+        -- neocmakelsp for the same buffers. Keep it inert.
+        vim.lsp.enable("cmake", false)
+
+        -- Harper-ls is system-installed, not Mason-managed.
+        -- Set it up directly using the native vim.lsp.config API.
+        vim.lsp.config["harper_ls"] = {
+            cmd = { "harper-ls", "--stdio" },
+            filetypes = { "markdown", "vimwiki" },
+            get_language_id = function(bufnr, filetype)
+                if filetype == "vimwiki" then return "markdown" end
+                return filetype
+            end,
+            capabilities = capabilities,
+            settings = {
+                ["harper-ls"] = {
+                    linters = {
+                        SpellCheck = true,
+                        AnA = true,
+                        SentenceCapitalization = true,
+                        UnclosedQuotes = true,
+                        LongSentences = true,
+                        RepeatedWords = true,
+                        Spaces = false,
+                        CorrectNumberSuffix = true,
+                    },
+                    codeActions = {
+                        ForceStable = false,
+                    },
+                    diagnosticSeverity = "warning",
                 },
-            }
-            vim.lsp.enable("arduino_language_server")
+            },
+        }
+        vim.lsp.enable("harper_ls")
 
-            -- asm_lsp
-            vim.lsp.config["asm_lsp"] = {
-                capabilities = capabilities,
-                filetypes = { "asm", "s", "S" },
-            }
-            vim.lsp.enable("asm_lsp")
+        local cmp_select = { behavior = cmp.SelectBehavior.Select }
 
-            -- Harper-ls is system-installed, not Mason-managed.
-            -- Set it up directly using the native vim.lsp.config API.
-            vim.lsp.config["harper_ls"] = {
-                cmd = { "harper-ls", "--stdio" },
-                filetypes = { "markdown", "vimwiki" },
-                get_language_id = function(bufnr, filetype)
-                    if filetype == "vimwiki" then return "markdown" end
-                    return filetype
+        cmp.setup({
+            snippet = {
+                expand = function(args)
+                    require('luasnip').lsp_expand(args.body) -- For `luasnip` users.
                 end,
-                capabilities = capabilities,
-                settings = {
-                    ["harper-ls"] = {
-                        linters = {
-                            SpellCheck = true,
-                            AnA = true,
-                            SentenceCapitalization = true,
-                            UnclosedQuotes = true,
-                            LongSentences = true,
-                            RepeatedWords = true,
-                            Spaces = false,
-                            CorrectNumberSuffix = true,
-                        },
-                        codeActions = {
-                            ForceStable = false,
-                        },
-                        diagnosticSeverity = "warning",
-                    },
-                },
-            }
-            vim.lsp.enable("harper_ls")
-
-            local cmp_select = { behavior = cmp.SelectBehavior.Select }
-
-            cmp.setup({
-                snippet = {
-                    expand = function(args)
-                        require('luasnip').lsp_expand(args.body) -- For `luasnip` users.
-                    end,
-                },
-                mapping = cmp.mapping.preset.insert({
-                    ['<C-p>'] = cmp.mapping.select_prev_item(cmp_select),
-                    ['<C-n>'] = cmp.mapping.select_next_item(cmp_select),
-                    ['<C-y>'] = cmp.mapping.confirm({ select = true }),
-                    ["<C-Space>"] = cmp.mapping.complete(),
-                }),
-                sources = cmp.config.sources({
-                    { name = 'nvim_lsp' },
-                    { name = 'luasnip' }, -- For luasnip users.
-                }, {
-                    { name = 'buffer' },
-                })
+            },
+            mapping = cmp.mapping.preset.insert({
+                ['<C-p>'] = cmp.mapping.select_prev_item(cmp_select),
+                ['<C-n>'] = cmp.mapping.select_next_item(cmp_select),
+                ['<C-y>'] = cmp.mapping.confirm({ select = true }),
+                ["<C-Space>"] = cmp.mapping.complete(),
+            }),
+            sources = cmp.config.sources({
+                { name = 'nvim_lsp' },
+                { name = 'luasnip' }, -- For luasnip users.
+            }, {
+                { name = 'buffer' },
             })
+        })
 
-            vim.diagnostic.config({
-                -- update_in_insert = true,
-                float = {
-                    focusable = false,
-                    style = "minimal",
-                    border = "rounded",
-                    source = "always",
-                    header = "",
-                    prefix = "",
-                },
-            })
+        vim.diagnostic.config({
+            -- update_in_insert = true,
+            float = {
+                focusable = false,
+                style = "minimal",
+                border = "rounded",
+                source = "always",
+                header = "",
+                prefix = "",
+            },
+        })
 
-            -- Diagnostics
-            vim.keymap.set("n", "[d", function()
-                vim.diagnostic.jump({ count = -1, float = true })
-            end, { desc = "Previous diagnostic" })
+        -- Diagnostics
+        vim.keymap.set("n", "[d", function()
+            vim.diagnostic.jump({ count = -1, float = true })
+        end, { desc = "Previous diagnostic" })
 
-            vim.keymap.set("n", "]d", function()
-                vim.diagnostic.jump({ count = 1, float = true })
-            end, { desc = "Next diagnostic" })
+        vim.keymap.set("n", "]d", function()
+            vim.diagnostic.jump({ count = 1, float = true })
+        end, { desc = "Next diagnostic" })
 
-            vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float, {
-                desc = "Show diagnostic under cursor",
-            })
+        vim.keymap.set("n", "<leader>e", vim.diagnostic.open_float, {
+            desc = "Show diagnostic under cursor",
+        })
 
-            vim.keymap.set("n", "<leader>q", vim.diagnostic.setqflist, {
-                desc = "Diagnostics to quickfix list",
-            })
-        end
-    }
+        vim.keymap.set("n", "<leader>q", vim.diagnostic.setqflist, {
+            desc = "Diagnostics to quickfix list",
+        })
+    end
+}

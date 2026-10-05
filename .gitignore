@@ -1,0 +1,9 @@
+# editor/OS leftovers
+*.bak*
+*.swp
+*~
+.DS_Store
+# generated per machine (plugins, parsers, Mason servers live in ~/.local/share/nvim)
+.luarc.json
+spell/*.spl
+plugin/packer_compiled.lua
